@@ -45,6 +45,9 @@
     
     // 获取服务器的JSON格式数据(解析/模型类)
     [self getJSONData];
+    
+    // 下拉刷新tableView
+    //[self pullToRefreshTableView];
 }
 
 #pragma mark --- MemoryWarning
@@ -63,7 +66,7 @@
     // 创建数据任务对象，发送请求
     // 手动启动任务
     
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"http://api.worldweatheronline.com/premium/v1/weather.ashx?q=nanjing&num_of_days=5&format=json&tp=6&key=12ed14639744d5bb00f329e250b37"]];
+    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:@"https://api.worldweatheronline.com/free/v2/weather.ashx?q=nanjing&num_of_days=5&format=json&tp=6&key=f150eb2d086b7d5f2a6200e2d3b6c"]];
     NSURLSession *session = [NSURLSession sharedSession];
     NSURLSessionDataTask *task = [session dataTaskWithRequest:request completionHandler:^(NSData * _Nullable data, NSURLResponse * _Nullable response, NSError * _Nullable error) {
         // 获取状态码
@@ -81,6 +84,8 @@
             dispatch_async(dispatch_get_main_queue(), ^{
                 // 刷新tableView
                 [self.tableView reloadData];
+//                self.hadLoad = YES;
+                [self.tableView.header endRefreshing];
                 // 解析头部视图需要的value；并更新头部视图
                 [self updateHeaderView:weatherDic[@"data"]];
             });
@@ -244,7 +249,7 @@
 }
 
 
-#pragma mark ---ConfigCellImage
+#pragma mark --- ConfigCellImage
 - (void)configCellImage:(UITableViewCell *)cell withWeather:(CKWeatherModel *)weather{
     // 造成主线程阻塞
     //cell.imageView.image = [UIImage imageWithData:[NSData dataWithContentsOfURL:weather.iconURL]];
@@ -298,49 +303,41 @@
 }
 
 #pragma mark --- RefreshTableView
-
-- (void)scrollViewDidScroll:(UIScrollView *)scrollView{
-    MJRefreshGifHeader *header = [MJRefreshGifHeader headerWithRefreshingTarget:self refreshingAction:@selector(getJSONData)];
-    // 设置普通状态的动画图片
-    [header setImages:@[[UIImage imageNamed:@"weather-broken"]] forState:MJRefreshStateIdle];
-    // 设置即将刷新状态的动画图片（一松开就会刷新的状态）
-    [header setImages:@[[UIImage imageNamed:@"weather-clear"]] forState:MJRefreshStatePulling];
-    // 设置正在刷新状态的动画图片
-    [header setImages:@[[UIImage imageNamed:@"weather-few-night"]] forState:MJRefreshStateRefreshing];
-    // 设置header
-    self.tableView.header = header;
+//- (void)pullToRefreshTableView{
+//    MJRefreshNormalHeader *headerView = [MJRefreshNormalHeader headerWithRefreshingTarget:self refreshingAction:@selector(getJSONData)];
+//    self.tableView.header = headerView;
+//    [self.tableView.header beginRefreshing];
+//}
+// 点击状态栏刷新
+- (void)scrollViewDidScrollToTop:(UIScrollView *)scrollView{
+    [self getJSONData];
 }
 
-//// 点击状态栏刷新
-//- (void)scrollViewDidScrollToTop:(UIScrollView *)scrollView{
-//    [self getJSONData];
-//}
-//
-//// 下拉刷新
-//-(void)scrollViewDidScroll:(UIScrollView *)scrollView{
-//    scrollView.delegate = self;
-//    if (!self.hadLoad && scrollView.contentOffset.y <= -50) {
-//        [self getJSONData];
-//        self.hadLoad = YES;
-//        
-//    }
-//}
+// 下拉刷新
+-(void)scrollViewDidScroll:(UIScrollView *)scrollView{
+    scrollView.delegate = self;
+    if (!self.hadLoad && scrollView.contentOffset.y <= -50) {
+        [self getJSONData];
+        self.hadLoad = YES;
+    }
+}
 
-//- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate{
-//    scrollView.contentInset = UIEdgeInsetsMake(90, 0, 0, 0);
-//    scrollView.scrollIndicatorInsets = UIEdgeInsetsMake(90, 0, 0, 0);
-//    if (scrollView.contentOffset.y <= -40) {
-//        [UIView animateWithDuration:0.5 delay:0.5 options:UIViewAnimationOptionCurveEaseIn animations:^{
-//            scrollView.contentInset = UIEdgeInsetsMake(50, 0, 0, 0);
-//        } completion:^(BOOL finished) {
-//            //scrollView.contentInset = UIEdgeInsetsZero;
-//        }];
-//    }
-//}
-//
-//- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
-//    scrollView.contentInset = UIEdgeInsetsZero;
-//}
+- (void)scrollViewDidEndDragging:(UIScrollView *)scrollView willDecelerate:(BOOL)decelerate{
+    scrollView.contentInset = UIEdgeInsetsMake(90, 0, 0, 0);
+    scrollView.scrollIndicatorInsets = UIEdgeInsetsMake(90, 0, 0, 0);
+    if (scrollView.contentOffset.y <= -40) {
+        [UIView animateWithDuration:0.5 delay:0.5 options:UIViewAnimationOptionCurveEaseIn animations:^{
+            scrollView.contentInset = UIEdgeInsetsMake(50, 0, 0, 0);
+            
+        } completion:^(BOOL finished) {
+            //scrollView.contentInset = UIEdgeInsetsZero;
+        }];
+    }
+}
+
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView{
+    scrollView.contentInset = UIEdgeInsetsZero;
+}
 
 #pragma mark --- GetFilePath
 - (NSString *)getFilePath:(CKWeatherModel *)weather{
